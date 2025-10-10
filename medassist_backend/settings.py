@@ -38,9 +38,6 @@ ALLOWED_HOSTS = [
     "127.0.0.1",
 ]
 
-STATIC_URL = "/static/"
-STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
-
 
 # Application definition
 
@@ -62,6 +59,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -107,8 +105,14 @@ if DEBUG:
             "PORT": os.getenv("DB_PORT", "5432"),
         }
     }
-
-DATABASES = {"default": dj_database_url.config(default=os.getenv("SUPABASE_DB_URL"))}
+else:
+    DATABASES = {
+        "default": dj_database_url.config(
+            default=os.getenv("SUPABASE_DB_URL"),
+            conn_max_age=600,  # keep pooled connections alive for 10 min
+            ssl_require=True,  # Supabase always requires SSL
+        )
+    }
 
 
 # Password validation
@@ -142,12 +146,20 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
-
-STATIC_URL = "static/"
-
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/5.2/howto/static-files/
+
+STATIC_URL = "/static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+
+# Let Whitenoise serve static files efficiently
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
