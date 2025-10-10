@@ -48,7 +48,6 @@ class ChatbotAPIView(APIView):
             )
 
             bot_reply = response.choices[0].message.content.strip()
-            print(f"BOT REPLY: {bot_reply}")
             url = None
             if "med assist book an appointment" in bot_reply.lower():
                 bot_reply = "Click here to book your appointment"
