@@ -1,22 +1,34 @@
+from datetime import datetime, timedelta, timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from django_ratelimit.decorators import ratelimit
+from django.utils.decorators import method_decorator
 from openai import OpenAI
 import os
 from .faqs import FaqSystemPrompt
 
 SYSTEM_PROMPT = """
-You are a friendly and helpful medical assistant at a primary care clinic.
-If the user isn't asking a question relevant to a primary care clinic,
-gently remind them to focus on clinic-related topics.
-If the user wants to book an appointment, reply with 'MED ASSIST BOOK AN APPOINTMENT'.
-Otherwise, answer normally.
+You are a friendly and helpful medical assistant at a primary care clinic. If a user isn't asking questions relevant to a primary care clinic, don't answer but instead gently remind them to answer questions regarding a primary care clinic. You can reply to general greetings however. Analyze the user's message and determine if they are asking to book an appointment. Reply with 'MED ASSIST BOOK AN APPOINTMENT' otherwise reply normally.
 """
 
 
 class ChatbotAPIView(APIView):
-
+    @method_decorator(ratelimit(key="ip", rate="20/8h", method="POST", block=False))
     def post(self, request):
+        if getattr(request, "limited", False):
+            reset_time = datetime.now(timezone.utc) + timedelta(hours=8)
+            headers = {
+                "X-RateLimit-Limit": "20",
+                "X-RateLimit-Remaining": "0",
+                "X-RateLimit-Reset": str(int(reset_time.timestamp())),
+            }
+            return Response(
+                {"error": "You've reached your limit. Try again in 8 hours."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+                headers=headers,
+            )
+
         try:
             history = request.data.get("history", [])
             if not isinstance(history, list):

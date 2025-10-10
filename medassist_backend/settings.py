@@ -75,6 +75,16 @@ MIDDLEWARE = [
 ROOT_URLCONF = "medassist_backend.urls"
 WSGI_APPLICATION = "medassist_backend.wsgi.application"
 
+# -----------------------------------------
+# CACHES
+# -----------------------------------------
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": os.getenv("UPSTASH_REDIS_REST_URL"),
+    }
+}
+
 
 # -----------------------------------------
 # CORS (for Next.js frontend)
@@ -83,7 +93,11 @@ CORS_ALLOWED_ORIGINS = [
     "https://med-assist-ai.vercel.app",
     "http://localhost:3000",
 ]
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_EXPOSE_HEADERS = [
+    "X-RateLimit-Limit",
+    "X-RateLimit-Remaining",
+    "X-RateLimit-Reset",
+]
 
 
 # -----------------------------------------
