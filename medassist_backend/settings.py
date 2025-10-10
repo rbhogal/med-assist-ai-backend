@@ -198,3 +198,10 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 # Let Whitenoise serve static files efficiently
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+# -----------------------------------------
+# RATE LIMITING
+# -----------------------------------------
+RATELIMIT_USE_X_FORWARDED_FOR = True
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
