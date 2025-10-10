@@ -80,7 +80,8 @@ WSGI_APPLICATION = "medassist_backend.wsgi.application"
 # CORS (for Next.js frontend)
 # -----------------------------------------
 CORS_ALLOWED_ORIGINS = [
-    "https://med-assist-ai.vercel.app/",  # replace with your frontend URL
+    "https://med-assist-ai.vercel.app",
+    "http://localhost:3000",
 ]
 CORS_ALLOW_ALL_ORIGINS = True
 
