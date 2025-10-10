@@ -15,13 +15,13 @@ from dotenv import load_dotenv
 import os
 import dj_database_url
 
-
+# -----------------------------------------
+# BASE SETTINGS
+# -----------------------------------------
 load_dotenv()
-
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -32,11 +32,16 @@ SECRET_KEY = os.getenv("SECRET_KEY", "insecure-dev-key")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    ".onrender.com",  # allow all Render subdomains
+    "localhost",
+    "127.0.0.1",
+]
 
 
-# Application definition
-
+# -----------------------------------------
+# APPLICATIONS
+# -----------------------------------------
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -52,9 +57,13 @@ INSTALLED_APPS = [
     "bookings",
 ]
 
+# -----------------------------------------
+# MIDDLEWARE
+# -----------------------------------------
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -63,11 +72,23 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+ROOT_URLCONF = "medassist_backend.urls"
+WSGI_APPLICATION = "medassist_backend.wsgi.application"
+
+
+# -----------------------------------------
+# CORS (for Next.js frontend)
+# -----------------------------------------
+CORS_ALLOWED_ORIGINS = [
+    "https://med-assist-ai.vercel.app",
+    "http://localhost:3000",
+]
 CORS_ALLOW_ALL_ORIGINS = True
 
 
-ROOT_URLCONF = "medassist_backend.urls"
-
+# -----------------------------------------
+# TEMPLATES
+# -----------------------------------------
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -83,9 +104,9 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "medassist_backend.wsgi.application"
-
-
+# -----------------------------------------
+# DATABASE (Supabase + Local)
+# -----------------------------------------
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
@@ -100,10 +121,18 @@ if DEBUG:
             "PORT": os.getenv("DB_PORT", "5432"),
         }
     }
+else:
+    DATABASES = {
+        "default": dj_database_url.config(
+            default=os.getenv("SUPABASE_DB_URL"),
+            conn_max_age=600,  # keep pooled connections alive for 10 min
+            ssl_require=True,  # Supabase always requires SSL
+        )
+    }
 
-DATABASES = {"default": dj_database_url.config(default=os.getenv("SUPABASE_DB_URL"))}
-
-
+# -----------------------------------------
+# VALIDATORS
+# -----------------------------------------
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
@@ -123,24 +152,35 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+# -----------------------------------------
+# TIMEZONE & LANGUAGE
+# -----------------------------------------
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
 LANGUAGE_CODE = "en-us"
-
 TIME_ZONE = "UTC"
-
 USE_I18N = True
-
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
-
-STATIC_URL = "static/"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# -----------------------------------------
+# STATIC & MEDIA FILES
+# -----------------------------------------
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/5.2/howto/static-files/
+
+STATIC_URL = "/static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+
+# Let Whitenoise serve static files efficiently
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
