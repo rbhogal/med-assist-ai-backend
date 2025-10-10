@@ -15,13 +15,13 @@ from dotenv import load_dotenv
 import os
 import dj_database_url
 
-
+# -----------------------------------------
+# BASE SETTINGS
+# -----------------------------------------
 load_dotenv()
-
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -39,8 +39,9 @@ ALLOWED_HOSTS = [
 ]
 
 
-# Application definition
-
+# -----------------------------------------
+# APPLICATIONS
+# -----------------------------------------
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -56,6 +57,9 @@ INSTALLED_APPS = [
     "bookings",
 ]
 
+# -----------------------------------------
+# MIDDLEWARE
+# -----------------------------------------
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
@@ -68,11 +72,22 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+ROOT_URLCONF = "medassist_backend.urls"
+WSGI_APPLICATION = "medassist_backend.wsgi.application"
+
+
+# -----------------------------------------
+# CORS (for Next.js frontend)
+# -----------------------------------------
+CORS_ALLOWED_ORIGINS = [
+    "https://med-assist-ai.vercel.app/",  # replace with your frontend URL
+]
 CORS_ALLOW_ALL_ORIGINS = True
 
 
-ROOT_URLCONF = "medassist_backend.urls"
-
+# -----------------------------------------
+# TEMPLATES
+# -----------------------------------------
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -88,9 +103,9 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "medassist_backend.wsgi.application"
-
-
+# -----------------------------------------
+# DATABASE (Supabase + Local)
+# -----------------------------------------
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
@@ -114,7 +129,9 @@ else:
         )
     }
 
-
+# -----------------------------------------
+# VALIDATORS
+# -----------------------------------------
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
@@ -134,15 +151,15 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+# -----------------------------------------
+# TIMEZONE & LANGUAGE
+# -----------------------------------------
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
 LANGUAGE_CODE = "en-us"
-
 TIME_ZONE = "UTC"
-
 USE_I18N = True
-
 USE_TZ = True
 
 
@@ -152,6 +169,9 @@ USE_TZ = True
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
+# -----------------------------------------
+# STATIC & MEDIA FILES
+# -----------------------------------------
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
