@@ -12,8 +12,10 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 from dotenv import load_dotenv
+from django.conf import settings
 import os
 import dj_database_url
+
 
 # -----------------------------------------
 # BASE SETTINGS
@@ -205,3 +207,19 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 RATELIMIT_USE_X_FORWARDED_FOR = True
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# -----------------------------------------
+# DJANGO REST FRAMEWORK
+# -----------------------------------------
+REST_FRAMEWORK = {
+    "DEFAULT_RENDERER_CLASSES": (
+        [
+            "rest_framework.renderers.JSONRenderer",
+        ]
+        if not settings.DEBUG
+        else [
+            "rest_framework.renderers.JSONRenderer",
+            "rest_framework.renderers.BrowsableAPIRenderer",
+        ]
+    )
+}
