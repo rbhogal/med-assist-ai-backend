@@ -1,3 +1,4 @@
+from zoneinfo import ZoneInfo
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -129,18 +130,46 @@ class CreateBookingView(APIView):
 class AvailableSlotsView(APIView):
     """
     GET /api/calendar/available-slots/
-    Returns available 30-min time slots for the next 4 weeks.
+    Returns: [{"date": "YYYY-MM-DD", "slots": ["HH:MM", ...]}, ...]
     """
 
     def get(self, request):
         try:
-            timezone_str = "America/Los_Angeles"
-            now = datetime.now(timezone.utc).isoformat()
-            later = (datetime.now(timezone.utc) + timedelta(days=28)).isoformat()
+            tz_str = "America/Los_Angeles"
+            clinic_tz = ZoneInfo(tz_str)
+
+            now_utc = datetime.now(timezone.utc)
+            later_utc = now_utc + timedelta(days=28)
+
+            time_min = now_utc.isoformat()
+            time_max = later_utc.isoformat()
             working_hours = {"startHour": 9, "endHour": 17}
 
-            slots = generate_available_slots(now, later, timezone_str, working_hours)
-            return Response(slots, status=status.HTTP_200_OK)
+            raw_slots = generate_available_slots(
+                time_min, time_max, tz_str, working_hours
+            )
+
+            # Group by local date and format HH:MM, filtering out anything before "now" local
+            grouped = {}
+            now_local = now_utc.astimezone(clinic_tz)
+
+            for s in raw_slots:
+                start_local = datetime.fromisoformat(s["start"]).astimezone(clinic_tz)
+                if start_local < now_local:
+                    continue  # never show past slots
+
+                date_key = start_local.strftime("%Y-%m-%d")
+                time_str = start_local.strftime("%H:%M")  # 24-hr "HH:MM"
+
+                grouped.setdefault(date_key, []).append(time_str)
+
+            # Sort times within each day
+            payload = [
+                {"date": d, "slots": sorted(times)}
+                for d, times in sorted(grouped.items())
+            ]
+
+            return Response(payload, status=status.HTTP_200_OK)
 
         except Exception as e:
             print("Error fetching available slots:", e)
