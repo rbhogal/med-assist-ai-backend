@@ -3,6 +3,10 @@
 **MedAssist AI** is a Django REST Framework backend that powers a full-stack AI assistant for primary care clinics.  
 It integrates **OpenAI GPT-4.1** for intelligent FAQ automation and **Google Calendar** for real-time appointment scheduling, with **Supabase (PostgreSQL)** for data storage and **Upstash Redis** for rate limiting.
 
+
+### Next.js Frontend Repo
+https://github.com/rbhogal/med-assist-ai
+
 ---
 
 ## 🚀 Tech Stack
