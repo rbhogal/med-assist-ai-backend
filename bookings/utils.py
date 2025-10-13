@@ -1,6 +1,7 @@
 import os
 import json
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
@@ -26,10 +27,6 @@ calendar_id = os.getenv("GOOGLE_CALENDAR_ID")
 
 
 def get_busy_times(time_min: str, time_max: str, timezone: str):
-    """
-    Fetches busy time ranges from the Google Calendar API.
-    Returns a list of {start, end} objects.
-    """
     try:
         response = (
             calendar_service.freebusy()
@@ -43,71 +40,121 @@ def get_busy_times(time_min: str, time_max: str, timezone: str):
             )
             .execute()
         )
-
-        busy_times = response["calendars"][calendar_id].get("busy", [])
-        return busy_times
-
+        return response["calendars"][calendar_id].get("busy", [])
     except Exception as e:
         print("Error fetching busy times:", e)
         return []
+
+
+def _round_up_to_next_30(dt: datetime) -> datetime:
+    dt = dt.replace(second=0, microsecond=0)
+    remainder = dt.minute % 30
+    if remainder:
+        dt += timedelta(minutes=(30 - remainder))
+    return dt
+
+
+def _move_to_next_open_local(
+    dt_local: datetime, start_hour: int, end_hour: int
+) -> datetime:
+    # Skip weekends
+    while dt_local.weekday() >= 5:
+        dt_local = (dt_local + timedelta(days=1)).replace(
+            hour=start_hour, minute=0, second=0, microsecond=0
+        )
+
+    # Before opening → snap to opening
+    if dt_local.hour < start_hour or (
+        dt_local.hour == start_hour and dt_local.minute < 0
+    ):
+        dt_local = dt_local.replace(hour=start_hour, minute=0, second=0, microsecond=0)
+
+    # After closing → next workday opening
+    if dt_local.hour > end_hour or (dt_local.hour == end_hour and dt_local.minute > 0):
+        dt_local = (dt_local + timedelta(days=1)).replace(
+            hour=start_hour, minute=0, second=0, microsecond=0
+        )
+        while dt_local.weekday() >= 5:
+            dt_local = (dt_local + timedelta(days=1)).replace(
+                hour=start_hour, minute=0, second=0, microsecond=0
+            )
+
+    return dt_local
 
 
 def generate_available_slots(
     time_min: str, time_max: str, timezone: str, working_hours: dict
 ):
     """
-    Generates available 30-minute appointment slots between two dates,
-    skipping weekends and existing busy times.
+    Generates available 30-minute slots in the clinic timezone between time_min and time_max,
+    starting at "now" (rounded up), skipping weekends, and respecting working hours.
+    Returns a list of {"start": ISO, "end": ISO} where ISO includes the offset of the clinic TZ.
     """
-    busy_times = get_busy_times(time_min, time_max, timezone)
+    clinic_tz = ZoneInfo(timezone)
+    start_hour = working_hours["startHour"]
+    end_hour = working_hours["endHour"]
+
+    # Convert bounds (possibly UTC ISO) to aware datetimes then to clinic local
+    start_utc = datetime.fromisoformat(time_min.replace("Z", "+00:00"))
+    end_utc = datetime.fromisoformat(time_max.replace("Z", "+00:00"))
+
+    cursor_local = start_utc.astimezone(clinic_tz)
+    cursor_local = _round_up_to_next_30(cursor_local)
+    cursor_local = _move_to_next_open_local(cursor_local, start_hour, end_hour)
+
+    window_end_local = end_utc.astimezone(clinic_tz)
+
+    # Busy times → parse and convert to clinic local for consistent comparison
+    busy_raw = get_busy_times(time_min, time_max, timezone)
+    busy_local = []
+    for b in busy_raw:
+        bs = datetime.fromisoformat(b["start"].replace("Z", "+00:00")).astimezone(
+            clinic_tz
+        )
+        be = datetime.fromisoformat(b["end"].replace("Z", "+00:00")).astimezone(
+            clinic_tz
+        )
+        busy_local.append((bs, be))
+
+    slot = timedelta(minutes=30)
     slots = []
-    slot_duration = timedelta(minutes=30)
 
-    current = datetime.fromisoformat(time_min.replace("Z", "+00:00"))
-    window_end = datetime.fromisoformat(time_max.replace("Z", "+00:00"))
-
-    while current < window_end:
-        # Skip weekends (Sat=5, Sun=6)
-        if current.weekday() >= 5:
-            current += timedelta(days=1)
-            current = current.replace(
-                hour=working_hours["startHour"], minute=0, second=0
+    while cursor_local < window_end_local:
+        # Skip weekends
+        if cursor_local.weekday() >= 5:
+            cursor_local = (cursor_local + timedelta(days=1)).replace(
+                hour=start_hour, minute=0, second=0, microsecond=0
             )
             continue
 
-        # Adjust to start of workday if before
-        if current.hour < working_hours["startHour"]:
-            current = current.replace(
-                hour=working_hours["startHour"], minute=0, second=0
-            )
+        start_local = cursor_local
+        end_local = cursor_local + slot
 
-        # Define slot end time
-        slot_end = current + slot_duration
-
-        # Skip after work hours
-        if slot_end.hour >= working_hours["endHour"]:
-            current += timedelta(days=1)
-            current = current.replace(
-                hour=working_hours["startHour"], minute=0, second=0
+        # If the slot spills past closing, move to next day opening
+        if (end_local.hour > end_hour) or (
+            end_local.hour == end_hour and end_local.minute > 0
+        ):
+            cursor_local = (cursor_local + timedelta(days=1)).replace(
+                hour=start_hour, minute=0, second=0, microsecond=0
             )
             continue
 
-        # Check overlap with busy times
-        overlap = any(
-            datetime.fromisoformat(b["start"].replace("Z", "+00:00")) < slot_end
-            and datetime.fromisoformat(b["end"].replace("Z", "+00:00")) > current
-            for b in busy_times
+        # Overlap check in local tz
+        is_busy = any(
+            start_local < b_end and end_local > b_start
+            for (b_start, b_end) in busy_local
         )
 
-        if not overlap:
+        if not is_busy:
+            # Keep local offset in ISO; we’ll format to HH:MM in the view
             slots.append(
                 {
-                    "start": current.isoformat(),
-                    "end": slot_end.isoformat(),
+                    "start": start_local.isoformat(),
+                    "end": end_local.isoformat(),
                 }
             )
 
-        current += slot_duration
+        cursor_local += slot
 
     return slots
 
