@@ -55,7 +55,7 @@ Handles chat messages from users and returns responses generated via OpenAI GPT-
 ```
 
 
-### 📅 Available Slots
+### 🗓️ Available Slots
 **GET** `/api/calendar/available-slots/`  
 Returns all available 30-minute appointment slots within the next four weeks, grouped by date and filtered by working hours.
 
@@ -74,7 +74,7 @@ Returns all available 30-minute appointment slots within the next four weeks, gr
 ```
 
 
-### 🗓️ Create Appointment Event
+### 📅 Create Appointment Event
 **POST** `/api/calendar/create`  
 Creates a new appointment event on Google Calendar and stores it in the Supabase (PostgreSQL) database
 
