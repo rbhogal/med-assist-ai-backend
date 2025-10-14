@@ -74,7 +74,7 @@ Returns all available 30-minute appointment slots within the next four weeks, gr
 ```
 
 
-### 
+### 📅 Create Appointment Event
 **POST** `/api/calendar/create`  
 Creates a new appointment event on Google Calendar and stores it in the Supabase (PostgreSQL) database
 
