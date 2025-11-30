@@ -14,6 +14,17 @@ You are a friendly and helpful medical assistant at a primary care clinic. If a 
 
 
 class ChatbotAPIView(APIView):
+    def get(self, request):
+        """
+        Show an example request payload for testing in the browsable API.
+        """
+        sample = {
+            "history": [
+                {"role": "user", "content": "Hello, I need to book an appointment."}
+            ]
+        }
+        return Response(sample)
+
     @method_decorator(ratelimit(key="ip", rate="20/8h", method="POST", block=False))
     def post(self, request):
         if getattr(request, "limited", False):
