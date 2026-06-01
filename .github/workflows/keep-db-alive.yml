@@ -1,0 +1,19 @@
+name: Keep Supabase DB Alive
+
+on:
+  schedule:
+    - cron: "0 12 */3 * *"  # every 3 days at noon UTC
+  workflow_dispatch:         # allow manual trigger
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://med-assist-ai-backend-u6j6.onrender.com/api/health/)
+          echo "Response status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "Health check failed with status $STATUS"
+            exit 1
+          fi
