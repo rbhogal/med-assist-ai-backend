@@ -12,7 +12,6 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 from dotenv import load_dotenv
-from django.conf import settings
 import os
 import dj_database_url
 
@@ -211,7 +210,7 @@ REST_FRAMEWORK = {
         [
             "rest_framework.renderers.JSONRenderer",
         ]
-        if not settings.DEBUG
+        if not DEBUG
         else [
             "rest_framework.renderers.JSONRenderer",
             "rest_framework.renderers.BrowsableAPIRenderer",
